@@ -3270,7 +3270,7 @@ procedure TControl.ReadState(Reader: TReader);
 begin
   Include(FControlState, csReadingState);
   if Reader.Parent is TWinControl then Parent := TWinControl(Reader.Parent);
-  inherited ReadState(Reader);
+  inherited ReadState(Reader); // TComponent.ReadState 콜하여, Reader.ReadData 가 콜된다.
   Exclude(FControlState, csReadingState);
   if Parent <> nil then
   begin
@@ -5378,7 +5378,7 @@ procedure TWinControl.ReadState(Reader: TReader);
 begin
   DisableAlign;
   try
-    inherited ReadState(Reader);
+    inherited ReadState(Reader); // TControl.ReadState 콜
   finally
     EnableAlign;
   end;

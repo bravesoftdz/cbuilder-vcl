@@ -2041,15 +2041,15 @@ var
   Group: TRegGroup;
 begin
   inherited Create;
-  FGroups := TList.Create;
-  RegGroups.Lock;
+  FGroups := TList.Create; // 클래스 목록이겠쥐?
+  RegGroups.Lock; // 크리티컬 섹션으로 동기화 보호
   try
     if AClass = nil then AClass := RegGroups.ActiveClass;
-    for I := 0 to RegGroups.FGroups.Count - 1 do
+    for I := 0 to RegGroups.FGroups.Count - 1 do // 구룹별로 클래스 목록을 관리하는데... 디버깅 결과 2개이네. app 랑 form 인가??
     begin
-      Group := RegGroups.FGroups[I];
-      if Group.InGroup(AClass) then
-        FGroups.Add(Group);
+      Group := RegGroups.FGroups[I];// 2번째 루프에서는 아이템 개수가 10개이네??
+      if Group.InGroup(AClass) then // Group 에는 TForm 클래스 하나만 있다.
+        FGroups.Add(Group); // 클래스파인더에 아이템 추가
     end;
     if AIncludeActiveGroups then
       for I := 0 to RegGroups.FGroups.Count - 1 do
@@ -2438,13 +2438,13 @@ function InternalReadComponentRes(const ResName: string; HInst: THandle; var Ins
 var
   HRsrc: THandle;
 begin                   { avoid possible EResNotFound exception }
-  if HInst = 0 then HInst := HInstance;
-  HRsrc := FindResource(HInst, PChar(ResName), RT_RCDATA);
+  if HInst = 0 then HInst := HInstance; // 리소스핸들이 없다면, 어플리케이션 핸들로 사용
+  HRsrc := FindResource(HInst, PChar(ResName), RT_RCDATA); // 해당 폼데이터 리소스가 존재하는지 체크한다.
   Result := HRsrc <> 0;
   if not Result then Exit;
   with TResourceStream.Create(HInst, ResName, RT_RCDATA) do
   try
-    Instance := ReadComponent(Instance);
+    Instance := ReadComponent(Instance); // 인터페이스인 TStream.ReadComponent 를 호출
   finally
     Free;
   end;
@@ -2459,13 +2459,13 @@ procedure BeginGlobalLoading;
 var
   G: TList;
 begin
-  G := GlobalLists;
+  G := GlobalLists; // 최초 GlobalLists 는 널이다.
   if G = nil then
   begin
     G := TList.Create;
     GlobalLists := G;
   end;
-  G.Add(GlobalLoaded);
+  G.Add(GlobalLoaded); // GlobalLoaded 는 하나의 폼에 대한 컴포넌트들이겠쥐?
   GlobalLoaded := TList.Create;
 end;
 
@@ -2499,8 +2499,8 @@ function InitInheritedComponent(Instance: TComponent; RootAncestor: TClass): Boo
   function InitComponent(ClassType: TClass): Boolean;
   begin
     Result := False;
-    if (ClassType = TComponent) or (ClassType = RootAncestor) then Exit;
-    Result := InitComponent(ClassType.ClassParent);
+    if (ClassType = TComponent) or (ClassType = RootAncestor) then Exit; // 컴포넌트이거나, 베이스클래스이면 리턴
+    Result := InitComponent(ClassType.ClassParent); // 부모클래스로 재귀호출, 재귀 탈출조건은 바로 위에.
     Result := InternalReadComponentRes(ClassType.ClassName, FindResourceHInstance(
       FindClassHInstance(ClassType)), Instance) or Result;
   end;
@@ -4881,9 +4881,9 @@ function TStream.ReadComponent(Instance: TComponent): TComponent;
 var
   Reader: TReader;
 begin
-  Reader := TReader.Create(Self, 4096);
+  Reader := TReader.Create(Self, 4096); // 리더기는 제시한 크기만큼을 할당하고, 읽기할 대상인 스트림을 포인터로 가진다.
   try
-    Result := Reader.ReadRootComponent(Instance);
+    Result := Reader.ReadRootComponent(Instance); // 이제부터 폼 리소스 데이터를 로드하여, 롬을 구성한다.
   finally
     Reader.Free;
   end;
@@ -5266,8 +5266,8 @@ end;
 constructor TResourceStream.Create(Instance: THandle; const ResName: string;
   ResType: PChar);
 begin
-  inherited Create;
-  Initialize(Instance, PChar(ResName), ResType);
+  inherited Create; // 생성자에서 하는거 없다.
+  Initialize(Instance, PChar(ResName), ResType); // 리소스 핸들 및 사이즈 얻기
 end;
 
 constructor TResourceStream.CreateFromID(Instance: THandle; ResID: Integer;
@@ -5285,11 +5285,11 @@ procedure TResourceStream.Initialize(Instance: THandle; Name, ResType: PChar);
   end;
 
 begin
-  HResInfo := FindResource(Instance, Name, ResType);
+  HResInfo := FindResource(Instance, Name, ResType); // 리소스 찾기
   if HResInfo = 0 then Error;
-  HGlobal := LoadResource(Instance, HResInfo);
+  HGlobal := LoadResource(Instance, HResInfo); // 리소스 로드
   if HGlobal = 0 then Error;
-  SetPointer(LockResource(HGlobal), SizeOfResource(Instance, HResInfo));
+  SetPointer(LockResource(HGlobal), SizeOfResource(Instance, HResInfo)); // 리소스 데이터 포인터와, 사이즈를 멤버변수에 기입
 end;
 
 destructor TResourceStream.Destroy;
@@ -6050,7 +6050,7 @@ procedure TReader.ReadData(Instance: TComponent);
 begin
   if FFixups = nil then
   begin
-    FFixups := TList.Create;
+    FFixups := TList.Create; // 어떤 목록을 관리하는 것이지??
     try
       ReadDataInner(Instance);
       DoFixupReferences;
@@ -6190,7 +6190,7 @@ var
   Prefix: Byte;
 begin
   Flags := [];
-  if Byte(NextValue) and $F0 = $F0 then
+  if Byte(NextValue) and $F0 = $F0 then // 참인데 어케 거짓이지??
   begin
     Prefix := Byte(ReadValue);
     Byte(Flags) := Prefix and $0F;
@@ -6234,7 +6234,7 @@ begin
       while True do
       begin
         J := I;
-        while (I <= L) and (PropPath[I] <> '.') do Inc(I);
+        while (I <= L) and (PropPath[I] <> '.') do Inc(I); // 객체가 포함하는 객체를 접근
         FPropName := Copy(PropPath, J, I - J);
         if I > L then Break;
         PropInfo := GetPropInfo(Instance.ClassInfo, FPropName);
@@ -6247,7 +6247,7 @@ begin
         Instance := TPersistent(PropValue);
         Inc(I);
       end;
-      PropInfo := GetPropInfo(Instance.ClassInfo, FPropName);
+      PropInfo := GetPropInfo(Instance.ClassInfo, FPropName); // Left 에 대한 프로퍼티정보를 얻는다.
       if PropInfo <> nil then ReadPropValue(Instance, PropInfo) else
       begin
         { Cannot reliably recover from an error in a defined property }
@@ -6393,7 +6393,7 @@ var
   Flags: TFilerFlags;
   G: TList;
 begin
-  ReadSignature;
+  ReadSignature; // 'TPF0' 시그내쳐 체크
   Result := nil;
 {$IFDEF MSWINDOWS}
   GlobalNameSpace.BeginWrite;  // Loading from stream adds to name space
@@ -6401,20 +6401,20 @@ begin
 {$ENDIF}
     try
       ReadPrefix(Flags, I);
-      if Root = nil then
+      if Root = nil then // 자식 컴포넌트들을 생성할때 Root 는 널이 될것이다.
       begin
         Result := TComponentClass(FindClass(ReadStr)).Create(nil);
         Result.Name := ReadStr;
       end else
       begin
         Result := Root;
-        ReadStr; { Ignore class name }
+        ReadStr; { Ignore class name } // 'TForm1' 이름은 알고 있으므로 스킵한다.               
         if csDesigning in Result.ComponentState then
           ReadStr else
         begin
-          Include(Result.FComponentState, csLoading);
+          Include(Result.FComponentState, csLoading); // 로딩중이고, 리소스 리딩중임을 표시한다.
           Include(Result.FComponentState, csReading);
-          Result.Name := FindUniqueName(ReadStr);
+          Result.Name := FindUniqueName(ReadStr); // 'Form1' 라는 명칭이 부여됨
         end;
       end;
       FRoot := Result;
@@ -6427,11 +6427,11 @@ begin
           FLoaded := TList.Create;
         try
           if FLoaded.IndexOf(FRoot) < 0 then
-            FLoaded.Add(FRoot);
+            FLoaded.Add(FRoot); // 못찾았다면, 추가한다.
           FOwner := FRoot;
           Include(FRoot.FComponentState, csLoading);
           Include(FRoot.FComponentState, csReading);
-          FRoot.ReadState(Self);
+          FRoot.ReadState(Self); // TForm1 로드
           Exclude(FRoot.FComponentState, csReading);
           if G = nil then
             for I := 0 to FLoaded.Count - 1 do TComponent(FLoaded[I]).Loaded;
@@ -6520,7 +6520,7 @@ var
   Signature: Longint;
 begin
   Read(Signature, SizeOf(Signature));
-  if Signature <> Longint(FilerSignature) then ReadError(@SInvalidImage);
+  if Signature <> Longint(FilerSignature) then ReadError(@SInvalidImage); // 'TPF0' 시그내쳐인지 체크
 end;
 
 function TReader.ReadStr: string;
@@ -9587,7 +9587,7 @@ end;
 
 procedure TComponent.ReadState(Reader: TReader);
 begin
-  Reader.ReadData(Self);
+  Reader.ReadData(Self); // DFM 을 파싱하고 프로퍼티를 이용하여 멤버변수에 반영한다.
 end;
 
 procedure TComponent.WriteState(Writer: TWriter);

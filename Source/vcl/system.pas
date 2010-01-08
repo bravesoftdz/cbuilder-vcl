@@ -12227,7 +12227,7 @@ asm
         DB      0
 @@handle0:
         MOV     EAX,offset @@zeroByte
-{$ENDIF}             
+{$ENDIF}
 end;
 {$ENDIF}
 
@@ -16858,17 +16858,17 @@ function DelayLoadResourceModule(Module: PLibModule): LongWord;
 var
   FileName: array[0..MAX_PATH] of Char;
 begin
-  if Module.ResInstance = 0 then
+  if Module.ResInstance = 0 then // 리소스핸들이 있다면 바로 반환한다.
   begin
     GetModuleFileName(Module.Instance, FileName, SizeOf(FileName));
-    Module.ResInstance := LoadResourceModule(FileName);
+    Module.ResInstance := LoadResourceModule(FileName); // 없다면, LoadLibraryEx() 를 이용하여 리소스핸들을 얻는다.
     if Module.ResInstance = 0 then
       Module.ResInstance := Module.Instance;
   end;
   Result := Module.ResInstance;
 end;
 
-function FindResourceHInstance(Instance: LongWord): LongWord;
+function FindResourceHInstance(Instance: LongWord): LongWord; // FindClassHInstance 가 인스턴스를 주기는 주었네.
 var
   CurModule: PLibModule;
 begin
@@ -16879,7 +16879,7 @@ begin
        (Instance = CurModule.CodeInstance) or
        (Instance = CurModule.DataInstance) then
     begin
-      Result := DelayLoadResourceModule(CurModule);
+      Result := DelayLoadResourceModule(CurModule); // 리소스 핸들을 얻는다.
       Exit;
     end;
     CurModule := CurModule.Next;
