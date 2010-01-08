@@ -12823,12 +12823,12 @@ var
   CurThread: Cardinal;
   H: Byte;
 begin
-  H := HashIndex;
+  H := HashIndex; // 해쉬키를 어떻게 구한것인지 이해 안감.??
   CurThread := GetCurrentThreadID;
 
-  P := FHashTable[H];
-  while (P <> nil) and (P.ThreadID <> CurThread) do
-    P := P.Next;
+  P := FHashTable[H]; // 해쉬테이블로부터 PThreadInfo2 포인터를 얻는다.
+  while (P <> nil) and (P.ThreadID <> CurThread) do // 포인터가 유효하고, 스레드ID 가 다를때까지 계속
+    P := P.Next; // 다음 PThreadInfo2 포인터를 얻는다.
 
   if P = nil then
   begin
@@ -12836,15 +12836,15 @@ begin
 
     if P = nil then
     begin
-      P := PThreadInfo2(AllocMem(sizeof(TThreadInfo2)));
-      P.ThreadID := CurThread;
-      P.Active := Alive;
+      P := PThreadInfo2(AllocMem(sizeof(TThreadInfo2))); // PThreadInfo2 를 할당
+      P.ThreadID := CurThread; // 스레드ID 기입
+      P.Active := Alive; // Alive ??
 
       // Another thread could start traversing the list between when we set the
       // head to P and when we assign to P.Next.  Initializing P.Next to point
       // to itself will make others spin until we assign the tail to P.Next.
       P.Next := P;
-      P.Next := PThreadInfo2(InterlockedExchange(Integer(FHashTable[H]), Integer(P)));
+      P.Next := PThreadInfo2(InterlockedExchange(Integer(FHashTable[H]), Integer(P))); // FHashTable[H]가 반환된 값은 널이 된다.
     end;
   end;
   Thread := P;
@@ -12866,7 +12866,7 @@ var
   Gen: Integer;
 begin
   Result := FHashTable[HashIndex];
-  while (Result <> nil) do
+  while (Result <> nil) do // 여기서부터 분석 안함.
   begin
     Gen := InterlockedExchange(Result.Active, Alive);
     if Gen <> Alive then
@@ -12977,27 +12977,27 @@ begin
 {$ENDIF}
   Result := True;
   ThreadID := GetCurrentThreadID;
-  if FWriterID <> ThreadID then  // somebody or nobody has a write lock
+  if FWriterID <> ThreadID then  // somebody or nobody has a write lock // 쓰기락이 걸렸는지?
   begin
     // Prevent new readers from entering while we wait for the existing readers
     // to exit.
-    BlockReaders; 
+    BlockReaders; // 읽기시그널 이벤트 리셋
 
-    OldRevisionLevel := FRevisionLevel;
+    OldRevisionLevel := FRevisionLevel; // 깊이레벨 보관
 
-    TThreadLocalCounter2(tls).Open(Thread);
+    TThreadLocalCounter2(tls).Open(Thread); // Thread 포인터는 새로 할당한 ThreadInfo2 로 갱신된다.
     // We have another lock already. It must be a read lock, because if it
     // were a write lock, FWriterID would be our threadid.
-    HasReadLock := Thread.RecursionCount > 0;
+    HasReadLock := Thread.RecursionCount > 0; // 읽기락이 걸렸는지?
 
     if HasReadLock then    // acquiring a write lock requires releasing read locks
-      InterlockedIncrement(FSentinel);
+      InterlockedIncrement(FSentinel); // 읽기락이 걸려있으면,  FSentinel 값을 -1 한다.
 
 {$IFDEF DEBUG_MREWS}
     Debug('Write before loop');
 {$ENDIF}
     // InterlockedExchangeAdd returns prev value
-    while InterlockedExchangeAdd(FSentinel, -mrWriteRequest) <> mrWriteRequest do
+    while InterlockedExchangeAdd(FSentinel, -mrWriteRequest) <> mrWriteRequest do // (0 != 0xffff) 를 만족하는데 왜 거짖이지??
     begin
 {$IFDEF DEBUG_MREWS}
       Debug('Write loop');
@@ -13016,7 +13016,7 @@ begin
         {$IFDEF DEBUG_MREWS}
         Debug('Write starting to wait');
         {$ENDIF}
-        WaitForWriteSignal;
+        WaitForWriteSignal; // 여기서 쓰기 가능할때동안 대기 한다.
       end
       {$IFDEF DEBUG_MREWS}
       else
@@ -13035,10 +13035,10 @@ begin
 
     FWriterID := ThreadID;
 
-    Result := Integer(OldRevisionLevel) = (InterlockedIncrement(Integer(FRevisionLevel)) - 1);
+    Result := Integer(OldRevisionLevel) = (InterlockedIncrement(Integer(FRevisionLevel)) - 1); // 읽기중인 아니라면 FRevisionLevel 은 0 일것이고, 조건식을 만족할 것이다.
   end;
 
-  Inc(FWriteRecursionCount);
+  Inc(FWriteRecursionCount); // 쓰기카운트를 +1 한다.
 {$IFDEF DEBUG_MREWS}
   Debug('Write lock-----------------------------------');
 {$ENDIF}

@@ -2499,14 +2499,14 @@ end;
 
 constructor TCustomForm.Create(AOwner: TComponent);
 begin
-  GlobalNameSpace.BeginWrite;
+  GlobalNameSpace.BeginWrite; // 읽기/쓰기 동기화 객체, 여기서는 쓰기 동기화 객체를 사용한다.
   try
-    CreateNew(AOwner);
-    if (ClassType <> TForm) and not (csDesigning in ComponentState) then
+    CreateNew(AOwner); // 폼 멤버변수를 초기화한다.
+    if (ClassType <> TForm) and not (csDesigning in ComponentState) then // 타입 검사 및 디자인모드인지 체크
     begin
       Include(FFormState, fsCreating);
       try
-        if not InitInheritedComponent(Self, TForm) then
+        if not InitInheritedComponent(Self, TForm) then // 폼 리소스를 로드하여 폼을 구성한다.
           raise EResNotFound.CreateFmt(SResNotFound, [ClassName]);
       finally
         Exclude(FFormState, fsCreating);
@@ -2557,7 +2557,7 @@ begin
   ParentColor := False;
   ParentFont := False;
   Ctl3D := True;
-  Screen.AddForm(Self);
+  Screen.AddForm(Self); // 스크린 객체가 폼을 관리할 수 있도록, 폼을 추가.
 end;
 
 procedure TCustomForm.BeforeDestruction;
@@ -2660,14 +2660,14 @@ var
   NewTextHeight: Integer;
   Scaled: Boolean;
 begin
-  DisableAlign;
+  DisableAlign; // FAlignLevel 를 +1 한다.
   try
     FClientWidth := 0;
     FClientHeight := 0;
     FTextHeight := 0;
     Scaled := False;
     FOldCreateOrder := not ModuleIsCpp;
-    inherited ReadState(Reader);
+    inherited ReadState(Reader); // TWinControl.ReadState 콜
     if (FPixelsPerInch <> 0) and (FTextHeight > 0) then
     begin
       if (sfFont in ScalingFlags) and (FPixelsPerInch <> Screen.PixelsPerInch) then
@@ -6764,17 +6764,17 @@ procedure TApplication.CreateForm(InstanceClass: TComponentClass; var Reference)
 var
   Instance: TComponent;
 begin
-  Instance := TComponent(InstanceClass.NewInstance);
+  Instance := TComponent(InstanceClass.NewInstance); // 메타클래스 이용하여, 인스턴스화
   TComponent(Reference) := Instance;
   try
-    Instance.Create(Self);
+    Instance.Create(Self); // 폼 생성
   except
     TComponent(Reference) := nil;
     raise;
   end;
   if (FMainForm = nil) and (Instance is TForm) then
   begin
-    TForm(Instance).HandleNeeded;
+    TForm(Instance).HandleNeeded; // 윈도우핸들을 생성
     FMainForm := TForm(Instance);
   end;
 end;
