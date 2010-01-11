@@ -5327,11 +5327,11 @@ end;
 
 type
   TPropFixup = class
-    FInstance: TPersistent;
-    FInstanceRoot: TComponent;
-    FPropInfo: PPropInfo;
-    FRootName: string;
-    FName: string;
+    FInstance: TPersistent;     // 인스턴스
+    FInstanceRoot: TComponent;  // 인스턴스의 부모
+    FPropInfo: PPropInfo;       // 프로퍼티 정보
+    FRootName: string;          // 부모 이름
+    FName: string;              // 이름
     constructor Create(Instance: TPersistent; InstanceRoot: TComponent;
       PropInfo: PPropInfo; const RootName, Name: string);
     function MakeGlobalReference: Boolean;
@@ -5572,6 +5572,7 @@ begin
   end;
 end;
 
+// 픽스업 목록에서 해당 인스턴스 항목을 제거한다.
 procedure RemoveFixups(Instance: TPersistent);
 var
   I: Integer;
@@ -6408,7 +6409,7 @@ begin
       end else
       begin
         Result := Root;
-        ReadStr; { Ignore class name } // 'TForm1' 이름은 알고 있으므로 스킵한다.               
+        ReadStr; { Ignore class name } // 'TForm1' 이름은 알고 있으므로 스킵한다.
         if csDesigning in Result.ComponentState then
           ReadStr else
         begin
@@ -10685,5 +10686,5 @@ finalization
   FreeAndNil(SyncList);
   DeleteCriticalSection(ThreadLock);
   FreeAndNil(FindGlobalComponentProcs);
-  
+
 end.
